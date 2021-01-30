@@ -1,13 +1,12 @@
 import re
 import time
 
-import peewee
 import selenium
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from peewee import Model
-from settings import data_base, error_list
+from models import Directory, Autoprovision, data_base, autoprovision, MacAddress
+from settings import error_list, auto_provision_server
 
 
 class YealinkConfigure:
@@ -18,6 +17,7 @@ class YealinkConfigure:
         self.options = self.configure_driver()
         self.driver = webdriver.Chrome("D:\chromedriver\chromedriver.exe", options=self.configure_driver())
         self.driver.set_page_load_timeout(15)
+        self.provision_url = f'http://{self.ip}/servlet?m=mod_data&p=settings-autop&q=load'
 
     @staticmethod
     def configure_driver():
@@ -26,20 +26,43 @@ class YealinkConfigure:
         options.add_argument('--disable-gpu')
         return options
 
+    def set_auto_provision(self):
+        self.open_page(self.provision_url)
+        html_code = self.driver.page_source
+        if auto_provision_server not in html_code:
+            self.driver.find_element_by_name("AutoProvisionServerURL").send_keys(auto_provision_server)
+            try:
+                self.driver.find_element_by_id('btn_confirm1').click()
+            except selenium.common.exceptions.NoSuchElementException:
+                self.driver.find_element_by_name('btnSubmit').click()
+        time.sleep(5)
+        query = Autoprovision.select().where(Autoprovision.telephone_ip == self.ip)
+        if not query.exists():
+            Autoprovision.insert({
+                'telephone_ip': self.ip,
+                'provision_status': True
+            }).execute()
+        Autoprovision.update(telephone_ip=self.ip, provision_status=True)
+
     def get_mac_ip(self):
-        self.driver.get(self.url)
+        self.open_page(self.url)
+        html = self.driver.page_source
+        mac = self.extract_info('#tdMACAddress', html)
+        mac = re.sub(':', '', mac)
+        query = MacAddress.select().where(MacAddress.telephone_ip == self.ip)
+        if not query.exists():
+            MacAddress.create(telephone_ip=self.ip, mac_address=mac)
+        MacAddress.update(telephone_ip=self.ip, mac_address=mac)
+        self.driver.quit()
+
+    def open_page(self, page):
+        self.driver.get(page)
         self.login_in_site('admin')
         time.sleep(2)
         if self.wrong_password():
             self.driver.refresh()
             self.login_in_site('admin1')
         time.sleep(5)
-        html = self.driver.page_source
-        mac = self.extract_info('#tdMACAddress', html)
-        ip_address = self.extract_info('#tdWANIP', html)
-        mac = re.sub(':', '', mac)
-        print(f'Мак телефон {mac}\tIP телефона {ip_address}')
-        self.driver.quit()
 
     def login_in_site(self, password):
         try:
@@ -73,41 +96,6 @@ class YealinkConfigure:
         return info.group(1)
 
 
-def run(telephone_ip):
-    telephone = YealinkConfigure(telephone_ip)
-    try:
-        telephone.get_mac_ip()
-    except selenium.common.exceptions.WebDriverException:
-        telephone.driver.close()
-        print('Timeout Error')
-
-
-class BaseModel(Model):
-    class Meta:
-        database = data_base
-
-
-class Directory(BaseModel):
-    domain_id = peewee.IntegerField()
-    cache = peewee.IntegerField()
-    username = peewee.CharField(max_length=255)
-    line = peewee.CharField(max_length=255)
-    telephone_model = peewee.CharField(max_length=255)
-    telephone_ip = peewee.CharField(max_length=50)
-    computer_ip = peewee.CharField(max_length=50)
-    computer_mac = peewee.CharField(max_length=255)
-    other_telephone_number = peewee.TextField()
-    vlan = peewee.TextField()
-    desc = peewee.TextField()
-    ad_display_name = peewee.CharField(max_length=255)
-    ad_extension_attribute = peewee.CharField(max_length=255)
-    ad_department = peewee.CharField(max_length=255)
-    ad_ip_phone = peewee.CharField(max_length=255)
-    ad_title = peewee.CharField(max_length=255)
-    samaccountname = peewee.CharField(max_length=255)
-    network_device = peewee.CharField(max_length=255)
-
-
 def get_mac(ip):
     yealink_telephone = YealinkConfigure(ip)
     print(f'начинаю проверку мака у телефона {ip}')
@@ -118,14 +106,28 @@ def get_mac(ip):
         print(f'телефон {ip} не включен')
 
 
-def get_all_mac_by_model(model):
+def get_all_mac_by_model(model='Yealink T21P E2'):
+    '''
+    Getting all mac by telephone model
+    :param model: can be Yealink T21P E2
+    :return:
+    '''
     for ip in Directory.select().where(Directory.telephone_model == model):
-        get_mac(ip)
+        query = MacAddress.select().where(MacAddress.telephone_ip == ip.telephone_ip)
+        if not query.exists():
+            get_mac(ip.telephone_ip)
 
 
 def get_one_mac(ip):
     get_mac(ip)
 
 
+def auto_provision(ip):
+    yealink = YealinkConfigure(ip)
+    yealink.set_auto_provision()
+
+
 if __name__ == '__main__':
-    get_one_mac('172.29.0.81')
+    autoprovision.create_tables([Autoprovision])
+    data_base.create_tables([Directory, MacAddress])
+    get_all_mac_by_model()
