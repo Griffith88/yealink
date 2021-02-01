@@ -5,6 +5,8 @@ import selenium
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+import requests
+
 from models import Directory, Autoprovision, data_base, autoprovision, MacAddress
 from settings import error_list, auto_provision_server
 
@@ -118,6 +120,20 @@ def get_all_mac_by_model(model='Yealink T21P E2'):
             get_mac(ip.telephone_ip)
 
 
+def get_status_by_model(model='Yealink T21P E2'):
+    for ip in Directory.select().where(Directory.telephone_model == model):
+        query = MacAddress.select().where(MacAddress.telephone_ip == ip.telephone_ip)
+        if not query.exists():
+            get_status(ip.telephone_ip)
+
+def get_status(ip='172.29.48.23'):
+    url = f'http://{ip}/servlet?m =mod_data&p=status&q=load'
+    try:
+        response = requests.get(url, timeout=10)
+        print(f'статус {response} у {ip} ')
+    except requests.exceptions.ConnectionError:
+        print(f'Телефон с {ip} не пингуется')
+
 def get_one_mac(ip):
     get_mac(ip)
 
@@ -130,4 +146,5 @@ def auto_provision(ip):
 if __name__ == '__main__':
     autoprovision.create_tables([Autoprovision])
     data_base.create_tables([Directory, MacAddress])
-    get_all_mac_by_model()
+    get_one_mac('172.29.16.108')
+    get_one_mac('172.29.48.23')
