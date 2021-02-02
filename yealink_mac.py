@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import requests
-
+from multiprocessing.dummy import Pool as ThreadPool
 from models import Directory, Autoprovision, data_base, autoprovision, MacAddress
 from settings import error_list, auto_provision_server
 
@@ -18,7 +18,7 @@ class YealinkConfigure:
         self.url = f'http://{self.ip}/servlet?m=mod_data&p=status&q=load'
         self.options = self.configure_driver()
         self.driver = webdriver.Chrome("D:\chromedriver\chromedriver.exe", options=self.configure_driver())
-        self.driver.set_page_load_timeout(15)
+        self.driver.set_page_load_timeout(30)
         self.provision_url = f'http://{self.ip}/servlet?m=mod_data&p=settings-autop&q=load'
 
     @staticmethod
@@ -54,7 +54,10 @@ class YealinkConfigure:
         query = MacAddress.select().where(MacAddress.telephone_ip == self.ip)
         if not query.exists():
             MacAddress.create(telephone_ip=self.ip, mac_address=mac)
-        MacAddress.update(telephone_ip=self.ip, mac_address=mac)
+            print(f'ЗАПИСЫВАЮ данные в таблицу. ip={self.ip},mac={mac}')
+        else:
+            MacAddress.update(telephone_ip=self.ip, mac_address=mac)
+            print(f'ОБНОВЛЯЮ данные в таблицу. ip={self.ip},mac={mac}')
         self.driver.quit()
 
     def open_page(self, page):
@@ -146,5 +149,10 @@ def auto_provision(ip):
 if __name__ == '__main__':
     autoprovision.create_tables([Autoprovision])
     data_base.create_tables([Directory, MacAddress])
-    get_one_mac('172.29.16.108')
-    get_one_mac('172.29.48.23')
+    telephobe_list_ip = []
+    for ip in Directory.select().where(Directory.telephone_model == 'Yealink T21P E2'):
+        query = MacAddress.select().where(MacAddress.telephone_ip == ip.telephone_ip)
+        if not query.exists():
+            telephobe_list_ip.append(ip.telephone_ip)
+    pool = ThreadPool(4)
+    pool.map(get_one_mac, telephobe_list_ip)
