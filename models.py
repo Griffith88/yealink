@@ -1,11 +1,11 @@
 import peewee
 from peewee import Model
-from settings import data_base, autoprovision
+from settings import  autoprovision
 
 
 class BaseModel1(Model):
     class Meta:
-        database = data_base
+        database = autoprovision
 
 
 class Directory(BaseModel1):
@@ -34,11 +34,6 @@ class MacAddress(BaseModel1):
     mac_address = peewee.CharField(max_length=12)
 
 
-class BaseModel2(Model):
-    class Meta:
-        database = autoprovision
-
-
-class Autoprovision(BaseModel2):
+class Autoprovision(BaseModel1):
     telephone_ip = peewee.CharField(max_length=16)
     provision_status = peewee.BooleanField()

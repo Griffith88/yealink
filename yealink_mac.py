@@ -7,7 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import requests
 from multiprocessing.dummy import Pool as ThreadPool
-from models import Directory, Autoprovision, data_base, autoprovision, MacAddress
+from models import Directory, Autoprovision, autoprovision, MacAddress
 from settings import error_list, auto_provision_server
 
 
@@ -129,6 +129,7 @@ def get_status_by_model(model='Yealink T21P E2'):
         if not query.exists():
             get_status(ip.telephone_ip)
 
+
 def get_status(ip='172.29.48.23'):
     url = f'http://{ip}/servlet?m =mod_data&p=status&q=load'
     try:
@@ -136,6 +137,7 @@ def get_status(ip='172.29.48.23'):
         print(f'статус {response} у {ip} ')
     except requests.exceptions.ConnectionError:
         print(f'Телефон с {ip} не пингуется')
+
 
 def get_one_mac(ip):
     get_mac(ip)
