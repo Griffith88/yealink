@@ -22,13 +22,11 @@ class Phone:
         query = Directory.select().where(Directory.telephone_mac == self.mac)
         if query.exists():
             result = query.get()
-            print(result.line)
             return result.line
         else:
-            raise ValueError(f'{self.mac} --- такого мак адреса нету в системе')
+            raise ValueError(f'{self.mac} --- такого мак адреса нету в системе, создайте пользователя в базе данных')
 
     def get_model(self):
-        print(self.user_agent)
         if 'SIP-T58' in self.user_agent:
             self.model = self.models['T58_CONFIG']
         elif 'SIP-T21P_E2' in self.user_agent:
@@ -44,6 +42,8 @@ class Phone:
 
     def get_configuration_file_name(self):
         self.line = self.get_number()
+        if not self.line:
+            raise ValueError(f'К mac-address {self.mac} не привязано номера телефона')
         file_name = os.path.normpath('configs\\' + f'{self.mac}.cfg')
         with open(file_name, 'w', encoding='utf8') as mac_file:
             with open(self.model, 'r', encoding='utf8') as base_file:
