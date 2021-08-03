@@ -6,8 +6,8 @@ from werkzeug.exceptions import abort
 from cofigure_file import Phone
 from flask import Flask, Response, send_file, request
 
-
-basicConfig(filename=f'logs\\{date.today()}-log.log')
+log_path = os.path.normpath(os.path.join(os.path.dirname(__file__), 'logs', f'{date.today()}-log.log'))
+basicConfig(filename=log_path)
 app = Flask('yealink')
 
 
@@ -31,9 +31,9 @@ def configure_telephone(mac):
 
 @app.route('/firmware/<firmware_name>')
 def update_firmware(firmware_name):
-    file = os.path.normpath(f'firmware\\{firmware_name}')
+    file = os.path.normpath(os.path.join(os.path.dirname(__file__), 'firmware', firmware_name))
     return send_file(file, download_name=firmware_name)
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.53.33', port=5000, debug=True, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)

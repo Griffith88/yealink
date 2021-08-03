@@ -3,12 +3,13 @@ from models import Directory
 
 
 class Phone:
+    current_path = os.path.dirname(__file__)
     models = {
-        'T21PE2_CONFIG': os.path.normpath('configs\\base_t21pe2_config.cfg'),
-        'T58_CONFIG': os.path.normpath('configs\\base_t58_config.cfg'),
-        'T49G_CONFIG': os.path.normpath('configs\\base_t49g_config.cfg'),
-        'T46G_CONFIG': os.path.normpath('configs\\base_t46g_config.cfg'),
-        'T31G_CONFIG': os.path.normpath('configs\\base_t31g_config.cfg')
+        'T21PE2_CONFIG': os.path.normpath(os.path.join(current_path, 'configs', 'base_t21pe2_config.cfg')),
+        'T58_CONFIG': os.path.normpath(os.path.join(current_path, 'configs', 'base_t58_config.cfg')),
+        'T49G_CONFIG': os.path.normpath(os.path.join(current_path, 'configs', 'base_t49g_config.cfg')),
+        'T46G_CONFIG': os.path.normpath(os.path.join(current_path, 'configs', 'base_t46g_config.cfg')),
+        'T31G_CONFIG': os.path.normpath(os.path.join(current_path, 'configs', 'base_t31g_config.cfg'))
     }
 
     def __init__(self, mac, user_agent):
@@ -44,7 +45,7 @@ class Phone:
         self.line = self.get_number()
         if not self.line:
             raise ValueError(f'К mac-address {self.mac} не привязано номера телефона')
-        file_name = os.path.normpath('configs\\' + f'{self.mac}.cfg')
+        file_name = os.path.normpath(os.path.join(self.current_path, 'configs', f'{self.mac}.cfg'))
         with open(file_name, 'w', encoding='utf8') as mac_file:
             with open(self.model, 'r', encoding='utf8') as base_file:
                 for row in base_file:

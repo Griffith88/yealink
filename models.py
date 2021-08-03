@@ -14,4 +14,3 @@ class Directory(BaseModel1):
     telephone_ip = peewee.CharField(max_length=50)
     vlan = peewee.TextField()
     telephone_mac = peewee.CharField(max_length=255)
-
